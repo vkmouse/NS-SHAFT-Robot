@@ -35,6 +35,8 @@ void Player::choose_action(int &mode, short &time)
 
     // sort by y-axis from lowest to highest
     Rect *Fboard = &(*bboxes.begin()); // first board under the character
+    if (character.br().y - Fboard->y > Fboard->height)
+        return;
 
     // check distance reachable
     std::vector<bool> reachable(num_bboxes, true);
@@ -54,20 +56,6 @@ void Player::choose_action(int &mode, short &time)
         if (required_time_x[i] > required_time_y[i]) // unreachable
             reachable[i] = false;
     }
-
-    // // check obstacle reachable
-    // for (int i = 1; i < num_bboxes; i++)
-    // {
-    //     if (reachable[i])
-    //     {
-    //         for (int j = i - 1; j <= 1; j--)
-    //             if (bboxes[i].x == bboxes[j].x)
-    //             {
-    //                 reachable[i] = false;
-    //                 break;
-    //             }
-    //     }
-    // }
 
     // check number of reachable bboxes
     std::vector<Rect> reachable_bboxes;
@@ -106,8 +94,16 @@ void Player::choose_action(int &mode, short &time)
     }
     else // stop
     {
-        mode = STOP;
-        reachable_time_x[r] = 1000;
+        if (rand() % 2)
+        {
+            mode = MOVERIGHT;
+            reachable_time_x[r] = (Fboard->br().x - character.x) / speed_x / 2;
+        }
+        else
+        {
+            mode = MOVELEFT;
+            reachable_time_x[r] = (character.br().x - Fboard->x) / speed_x / 2;
+        }
     }
     reachable_time_x[r] *= (11.0 / 10.0);
     time = round(std::min(5000.0, std::max(0.0, reachable_time_x[r])));
