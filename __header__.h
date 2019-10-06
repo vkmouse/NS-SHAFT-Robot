@@ -63,11 +63,14 @@ private:
     Rect dst_board;
     Mat dst;
     Mat observation;
+    double speed_x = 0.1732;          // speed_x = 0.1732 pixels / ms
+    double acc_y = 2.0 / 57.0 / 57.0; // acceleration for y-axis is 2 pixels per 57 ms.
 
     Rect detect_character(Mat img);
     std::vector<Rect> detect_object(Mat img);
     bool is_gameover();
     double IOU(const Rect &r1, const Rect &r2);
     void nms(std::vector<Rect> &proposals, const double nms_threshold);
-    void check_distance_reachable(std::vector<Rect> &bboxes, std::vector<double> &time_x, std::vector<double> &time_y);
+    std::vector<Rect> check_distance_reachable(std::vector<Rect> bboxes, std::vector<double> &time_x, std::vector<double> &time_y);
+    int check_distance_reachable(std::vector<Rect> bboxes);
 };

@@ -14,6 +14,9 @@ Player::Player(double scale)
                  floor(384 * scale),
                  floor(352 * scale));
     dst_board = Rect(0, 0, 0, 0);
+
+    speed_x *= scale;
+    acc_y *= scale;
 }
 void Player::choose_action(int &mode, short &time)
 {
@@ -28,8 +31,6 @@ void Player::choose_action(int &mode, short &time)
     int num_bboxes = bboxes.size();
     if (num_bboxes < 2) // Unable to detect boards other than the board under the character
     {
-        mode = STOP;
-        time = 50;
         return;
     }
 
@@ -39,46 +40,27 @@ void Player::choose_action(int &mode, short &time)
         return;
 
     // check distance reachable
-    std::vector<bool> reachable(num_bboxes, true);
-    std::vector<double> required_time_x(num_bboxes);
-    std::vector<double> required_time_y(num_bboxes);
-    reachable[0] = false;
-    double speed_x = 0.1732 * scale;          // speed_x = 0.1732 pixels / ms
-    double acc_y = 2.0 * scale / 57.0 / 57.0; // acceleration for y-axis is 2 pixels per 57 ms.
-
-    // S = v0t + 1/2 at^2, v0 -> 0
-    // S = 1/2 at^2
-    // t = sqrt (2S / a)
-    for (int i = 1; i < num_bboxes; i++)
-    {
-        required_time_x[i] = std::max(0, std::max(Fboard->tl().x, bboxes[i].tl().x) - std::min(Fboard->br().x, bboxes[i].br().x)) / speed_x;
-        required_time_y[i] = sqrt(2.0 * abs(bboxes[i].y - Fboard->y) / acc_y);
-        if (required_time_x[i] > required_time_y[i]) // unreachable
-            reachable[i] = false;
-    }
-
-    // check number of reachable bboxes
-    std::vector<Rect> reachable_bboxes;
     std::vector<double> reachable_time_x;
     std::vector<double> reachable_time_y;
-    for (int i = 0; i < num_bboxes; i++)
-        if (reachable[i])
-        {
-            reachable_bboxes.push_back(bboxes[i]);
-            reachable_time_x.push_back(required_time_x[i]);
-            reachable_time_y.push_back(required_time_y[i]);
-        }
+    std::vector<Rect> reachable_bboxes = check_distance_reachable(bboxes, reachable_time_x, reachable_time_y);
+
     if (reachable_bboxes.size() == 0)
         return;
 
     // select destination board
-    int r = 0;
+    int r = -1;
     for (int i = 0; i < reachable_bboxes.size(); i++)
     {
         if (reachable_bboxes[r].height > reachable_bboxes[i].height ||                             // choose smaller
             reachable_time_y[r] - reachable_time_x[r] < reachable_time_y[i] - reachable_time_x[i]) // choose bigger
-            r = i;
+        {
+            std::vector<Rect> tmp_bboxes(reachable_bboxes.begin() + i, reachable_bboxes.end());
+            if (check_distance_reachable(tmp_bboxes) > 0)
+                r = i;
+        }
     }
+    if (r == -1)
+        return;
     dst_board = reachable_bboxes[r];
 
     // choose action
@@ -286,4 +268,53 @@ void Player::nms(std::vector<Rect> &proposals, const double nms_threshold)
             new_proposals.push_back(proposals[i]);
     }
     proposals = new_proposals;
+}
+std::vector<Rect> Player::check_distance_reachable(std::vector<Rect> bboxes, std::vector<double> &time_x, std::vector<double> &time_y)
+{
+    int num_bboxes = bboxes.size();
+    if (num_bboxes < 2)
+        return std::vector<Rect>();
+
+    std::vector<bool> reachable(num_bboxes, true);
+    std::vector<double> required_time_x(num_bboxes);
+    std::vector<double> required_time_y(num_bboxes);
+    reachable[0] = false;
+
+    // S = v0t + 1/2 at^2, v0 -> 0
+    // S = 1/2 at^2
+    // t = sqrt (2S / a)
+    for (int i = 1; i < num_bboxes; i++)
+    {
+        required_time_x[i] = std::max(0, std::max(bboxes.front().tl().x, bboxes[i].tl().x) - std::min(bboxes.front().br().x, bboxes[i].br().x)) / speed_x;
+        required_time_y[i] = sqrt(2.0 * abs(bboxes[i].y - bboxes.front().y) / acc_y);
+        if (required_time_x[i] > required_time_y[i]) // unreachable
+            reachable[i] = false;
+    }
+
+    // check number of reachable bboxes
+    std::vector<Rect> reachable_bboxes;
+    for (int i = 0; i < num_bboxes; i++)
+        if (reachable[i])
+        {
+            reachable_bboxes.push_back(bboxes[i]);
+            time_x.push_back(required_time_x[i]);
+            time_y.push_back(required_time_y[i]);
+        }
+    return reachable_bboxes;
+}
+int Player::check_distance_reachable(std::vector<Rect> bboxes)
+{
+    int num_bboxes = bboxes.size();
+    if (num_bboxes < 2)
+        return 0;
+
+    int num_reachable_bboxes = 0;
+    for (int i = 1; i < num_bboxes; i++)
+    {
+        double required_time_x = std::max(0, std::max(bboxes.front().tl().x, bboxes[i].tl().x) - std::min(bboxes.front().br().x, bboxes[i].br().x)) / speed_x;
+        double required_time_y = sqrt(2.0 * abs(bboxes[i].y - bboxes.front().y) / acc_y);
+        if (required_time_x < required_time_y) // reachable
+            num_reachable_bboxes++;
+    }
+    return num_reachable_bboxes;
 }
