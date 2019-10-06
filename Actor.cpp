@@ -40,14 +40,12 @@ void Actor::move_left(short time)
     SendMessage(hwnd, WM_KEYDOWN, VK_LEFT, 0);
     Sleep(time);
     SendMessage(hwnd, WM_KEYUP, VK_LEFT, 0);
-    Sleep(100);
 }
 void Actor::move_right(short time)
 {
     SendMessage(hwnd, WM_KEYDOWN, VK_RIGHT, 0);
     Sleep(time);
     SendMessage(hwnd, WM_KEYUP, VK_RIGHT, 0);
-    Sleep(100);
 }
 void Actor::restart()
 {

@@ -11,7 +11,6 @@ OPTION = -O3 \
 -l libopencv_highgui411 \
 -l libopencv_imgcodecs411 \
 -l libopencv_imgproc411 \
--l libopencv_dnn411 \
 -mwindows
 
 $(TARGET): $(OBJS)

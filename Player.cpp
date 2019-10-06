@@ -21,43 +21,44 @@ Player::Player(double scale)
 void Player::choose_action(int &mode, short &time)
 {
     dst_board = Rect();
-    // check gameover
+
+    // mode set to RESTART when gameover
     if (is_gameover())
     {
         mode = RESTART;
         return;
     }
-    // check number of bboxes
-    int num_bboxes = bboxes.size();
-    if (num_bboxes < 2) // Unable to detect boards other than the board under the character
-    {
-        return;
-    }
 
-    // sort by y-axis from lowest to highest
+    // Don't do anything when unable to detect boards other than the board under the character
+    int num_bboxes = bboxes.size(); // this bboxes is sorted by y-axis from lowest to highest
+    if (num_bboxes < 2)
+        return;
+
+    // Don't do anything when character is in the sky
     Rect *Fboard = &(*bboxes.begin()); // first board under the character
-    if (character.br().y - Fboard->y > Fboard->height)
+    if (Fboard->y - character.br().y > Fboard->height ||
+        Fboard->x > character.br().x ||
+        Fboard->br().x < character.x)
         return;
 
-    // check distance reachable
+    // Don't do anything when number of reachable bboxes is zero
     std::vector<double> reachable_time_x;
     std::vector<double> reachable_time_y;
     std::vector<Rect> reachable_bboxes = check_distance_reachable(bboxes, reachable_time_x, reachable_time_y);
-
     if (reachable_bboxes.size() == 0)
         return;
 
     // select destination board
-    int r = -1;
+    int r = -1; // -1 means that doesn't do anything
     for (int i = 0; i < reachable_bboxes.size(); i++)
     {
-        if (reachable_bboxes[r].height > reachable_bboxes[i].height ||                             // choose smaller
-            reachable_time_y[r] - reachable_time_x[r] < reachable_time_y[i] - reachable_time_x[i]) // choose bigger
-        {
-            std::vector<Rect> tmp_bboxes(reachable_bboxes.begin() + i, reachable_bboxes.end());
-            if (check_distance_reachable(tmp_bboxes) > 0)
-                r = i;
-        }
+        std::vector<Rect> tmp_bboxes(reachable_bboxes.begin() + i, reachable_bboxes.end());
+        int num_reachable_bboxes = check_distance_reachable(tmp_bboxes);
+        if (num_reachable_bboxes > 0 &&
+            (reachable_bboxes[r].height > reachable_bboxes[i].height ||                               // choose smaller
+             reachable_time_y[r] - reachable_time_x[r] < reachable_time_y[i] - reachable_time_x[i] || // choose bigger
+             r == -1))
+            r = i;
     }
     if (r == -1)
         return;
@@ -67,27 +68,27 @@ void Player::choose_action(int &mode, short &time)
     if (dst_board.x > Fboard->x) // move right
     {
         mode = MOVERIGHT;
-        reachable_time_x[r] += (Fboard->br().x - character.x) / speed_x;
+        reachable_time_x[r] += (Fboard->br().x - character.x) / speed_x; // character to the right edge
     }
     else if (dst_board.x < Fboard->x) // move left
     {
         mode = MOVELEFT;
-        reachable_time_x[r] += (character.br().x - Fboard->x) / speed_x;
+        reachable_time_x[r] += (character.br().x - Fboard->x) / speed_x; // character to the left edge
     }
     else // stop
     {
         if (rand() % 2)
         {
             mode = MOVERIGHT;
-            reachable_time_x[r] = (Fboard->br().x - character.x) / speed_x / 2;
+            reachable_time_x[r] = std::min(10.0, (Fboard->br().x - character.x) / speed_x / 2);
         }
         else
         {
             mode = MOVELEFT;
-            reachable_time_x[r] = (character.br().x - Fboard->x) / speed_x / 2;
+            reachable_time_x[r] = std::min(10.0, (character.br().x - Fboard->x) / speed_x / 2);
         }
     }
-    reachable_time_x[r] *= (11.0 / 10.0);
+    reachable_time_x[r] *= (23.0 / 20.0);
     time = round(std::min(5000.0, std::max(0.0, reachable_time_x[r])));
 }
 
