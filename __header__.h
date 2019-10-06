@@ -69,4 +69,5 @@ private:
     bool is_gameover();
     double IOU(const Rect &r1, const Rect &r2);
     void nms(std::vector<Rect> &proposals, const double nms_threshold);
+    void check_distance_reachable(std::vector<Rect> &bboxes, std::vector<double> &time_x, std::vector<double> &time_y);
 };

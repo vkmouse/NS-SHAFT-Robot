@@ -55,6 +55,20 @@ void Player::choose_action(int &mode, short &time)
             reachable[i] = false;
     }
 
+    // // check obstacle reachable
+    // for (int i = 1; i < num_bboxes; i++)
+    // {
+    //     if (reachable[i])
+    //     {
+    //         for (int j = i - 1; j <= 1; j--)
+    //             if (bboxes[i].x == bboxes[j].x)
+    //             {
+    //                 reachable[i] = false;
+    //                 break;
+    //             }
+    //     }
+    // }
+
     // check number of reachable bboxes
     std::vector<Rect> reachable_bboxes;
     std::vector<double> reachable_time_x;
@@ -73,12 +87,10 @@ void Player::choose_action(int &mode, short &time)
     int r = 0;
     for (int i = 0; i < reachable_bboxes.size(); i++)
     {
-        if (reachable_bboxes[r].height > reachable_bboxes[i].height || // not select spring
-            reachable_time_y[i] - reachable_time_x[i] < reachable_time_y[r] - reachable_time_x[r])
+        if (reachable_bboxes[r].height > reachable_bboxes[i].height ||                             // choose smaller
+            reachable_time_y[r] - reachable_time_x[r] < reachable_time_y[i] - reachable_time_x[i]) // choose bigger
             r = i;
     }
-    if (rand() % 10 == 0)
-        r = rand() % reachable_bboxes.size();
     dst_board = reachable_bboxes[r];
 
     // choose action
@@ -95,9 +107,9 @@ void Player::choose_action(int &mode, short &time)
     else // stop
     {
         mode = STOP;
-        required_time_x[r] = 1000;
+        reachable_time_x[r] = 1000;
     }
-    required_time_x[r] *= (15.0 / 10.0);
+    reachable_time_x[r] *= (11.0 / 10.0);
     time = round(std::min(5000.0, std::max(0.0, reachable_time_x[r])));
 }
 
